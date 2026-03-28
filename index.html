@@ -46,10 +46,51 @@
     </div>
   </div>
 
+  <!-- Modal -->
+  <div
+    id="imageModal"
+    class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 p-4"
+  >
+    <div class="relative max-w-4xl w-full">
+      <button
+        id="closeModal"
+        class="absolute top-3 right-3 bg-white text-black rounded-full w-10 h-10 text-lg shadow"
+      >
+        ✕
+      </button>
+
+      <div class="bg-white rounded-2xl overflow-hidden shadow-2xl">
+        <img
+          id="modalImage"
+          src=""
+          alt="Büyük fotoğraf"
+          class="w-full max-h-[75vh] object-contain bg-black"
+        />
+
+        <div class="p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          <div>
+            <p id="modalName" class="font-semibold"></p>
+            <p id="modalDate" class="text-sm text-gray-500"></p>
+          </div>
+
+          <a
+            id="downloadBtn"
+            href="#"
+            download
+            target="_blank"
+            class="inline-block bg-rose-400 hover:bg-rose-500 text-white px-5 py-2 rounded-lg text-center"
+          >
+            İndir
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-    const supabaseUrl = "https://sprthcaxikqrykkzmcml.supabase.co";
+    const supabaseUrl = "https://sprthcaxikqrykkzmcmI.supabase.co";
     const supabaseKey = "sb_publishable_cTie7htJ873Fm1-055CUZg_GjYAdr2V";
     const sb = createClient(supabaseUrl, supabaseKey);
 
@@ -58,6 +99,13 @@
     const uploadBtn = document.getElementById("uploadBtn");
     const statusEl = document.getElementById("status");
     const gallery = document.getElementById("gallery");
+
+    const imageModal = document.getElementById("imageModal");
+    const modalImage = document.getElementById("modalImage");
+    const modalName = document.getElementById("modalName");
+    const modalDate = document.getElementById("modalDate");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const closeModal = document.getElementById("closeModal");
 
     function setStatus(text, type = "normal") {
       statusEl.textContent = text;
@@ -74,6 +122,23 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+    }
+
+    function openModal(imageUrl, uploaderName, createdAt) {
+      modalImage.src = imageUrl;
+      modalName.textContent = uploaderName || "İsimsiz";
+      modalDate.textContent = new Date(createdAt).toLocaleString("tr-TR");
+      downloadBtn.href = imageUrl;
+      imageModal.classList.remove("hidden");
+      imageModal.classList.add("flex");
+      document.body.classList.add("overflow-hidden");
+    }
+
+    function closeModalFn() {
+      imageModal.classList.add("hidden");
+      imageModal.classList.remove("flex");
+      modalImage.src = "";
+      document.body.classList.remove("overflow-hidden");
     }
 
     async function loadGallery() {
@@ -97,7 +162,16 @@
 
       gallery.innerHTML = data.map((item) => `
         <div class="bg-white rounded-2xl shadow overflow-hidden">
-          <img src="${item.image_url}" alt="Fotoğraf" class="w-full h-64 object-cover" />
+          <button
+            class="w-full text-left"
+            onclick="window.openGalleryModal(
+              ${JSON.stringify(item.image_url)},
+              ${JSON.stringify(item.uploader_name || "İsimsiz")},
+              ${JSON.stringify(item.created_at)}
+            )"
+          >
+            <img src="${item.image_url}" alt="Fotoğraf" class="w-full h-64 object-cover hover:opacity-95 transition" />
+          </button>
           <div class="p-4">
             <p class="font-medium">${escapeHtml(item.uploader_name || "İsimsiz")}</p>
             <p class="text-xs text-gray-500 mt-1">
@@ -174,7 +248,19 @@
       }
     }
 
+    window.openGalleryModal = openModal;
+
     uploadBtn.addEventListener("click", uploadFiles);
+    closeModal.addEventListener("click", closeModalFn);
+
+    imageModal.addEventListener("click", (e) => {
+      if (e.target === imageModal) closeModalFn();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeModalFn();
+    });
+
     loadGallery();
   </script>
 </body>
