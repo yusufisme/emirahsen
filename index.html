@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ahsen Emir Nişan Anıları</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-rose-50 text-gray-800 min-h-screen">
 
@@ -33,7 +32,6 @@
 
       <button
         id="uploadBtn"
-        onclick="uploadFiles()"
         class="bg-rose-400 hover:bg-rose-500 text-white px-6 py-3 rounded-lg"
       >
         Yükle
@@ -48,13 +46,37 @@
     </div>
   </div>
 
-  <script>
-    const supabaseUrl = "https://sprthcaxikqrykkzmcmI.supabase.co";
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const supabaseUrl = "https://sprthcaxikqrykkzmcml.supabase.co";
     const supabaseKey = "sb_publishable_cTie7htJ873Fm1-055CUZg_GjYAdr2V";
-    const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const sb = createClient(supabaseUrl, supabaseKey);
+
+    const nameInput = document.getElementById("name");
+    const fileInput = document.getElementById("file");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const statusEl = document.getElementById("status");
+    const gallery = document.getElementById("gallery");
+
+    function setStatus(text, type = "normal") {
+      statusEl.textContent = text;
+      statusEl.className = "text-sm mt-3";
+      if (type === "error") statusEl.classList.add("text-red-500");
+      else if (type === "success") statusEl.classList.add("text-green-600");
+      else statusEl.classList.add("text-gray-600");
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
 
     async function loadGallery() {
-      const gallery = document.getElementById("gallery");
       gallery.innerHTML = "<p class='text-gray-500'>Yükleniyor...</p>";
 
       const { data, error } = await sb
@@ -63,8 +85,8 @@
         .order("created_at", { ascending: false });
 
       if (error) {
-        gallery.innerHTML = "<p class='text-red-500'>Galeri yüklenemedi.</p>";
-        console.error(error);
+        console.error("Galeri yükleme hatası:", error);
+        gallery.innerHTML = `<p class="text-red-500">Galeri yüklenemedi: ${error.message}</p>`;
         return;
       }
 
@@ -87,27 +109,22 @@
     }
 
     async function uploadFiles() {
-      const name = document.getElementById("name").value.trim();
-      const files = document.getElementById("file").files;
-      const status = document.getElementById("status");
-      const uploadBtn = document.getElementById("uploadBtn");
+      const name = nameInput.value.trim();
+      const files = fileInput.files;
 
       if (!name) {
-        status.textContent = "Lütfen ad soyad girin.";
-        status.className = "text-sm mt-3 text-red-500";
+        setStatus("Lütfen ad soyad girin.", "error");
         return;
       }
 
       if (!files.length) {
-        status.textContent = "Lütfen en az bir fotoğraf seçin.";
-        status.className = "text-sm mt-3 text-red-500";
+        setStatus("Lütfen en az bir fotoğraf seçin.", "error");
         return;
       }
 
       uploadBtn.disabled = true;
       uploadBtn.classList.add("opacity-60", "cursor-not-allowed");
-      status.textContent = "Fotoğraflar yükleniyor...";
-      status.className = "text-sm mt-3 text-gray-600";
+      setStatus("Fotoğraflar yükleniyor...");
 
       try {
         for (const file of files) {
@@ -145,29 +162,19 @@
           if (insertError) throw insertError;
         }
 
-        status.textContent = "Fotoğraflar başarıyla yüklendi.";
-        status.className = "text-sm mt-3 text-green-600";
-        document.getElementById("file").value = "";
+        setStatus("Fotoğraflar başarıyla yüklendi.", "success");
+        fileInput.value = "";
         await loadGallery();
       } catch (error) {
-        console.error(error);
-        status.textContent = "Hata: " + error.message;
-        status.className = "text-sm mt-3 text-red-500";
+        console.error("Upload hatası:", error);
+        setStatus("Hata: " + error.message, "error");
       } finally {
         uploadBtn.disabled = false;
         uploadBtn.classList.remove("opacity-60", "cursor-not-allowed");
       }
     }
 
-    function escapeHtml(str) {
-      return str
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
+    uploadBtn.addEventListener("click", uploadFiles);
     loadGallery();
   </script>
 </body>
