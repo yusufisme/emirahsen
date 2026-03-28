@@ -1,58 +1,174 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ahsen Emir Nişan Anıları</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-rose-50 text-gray-800">
+<body class="bg-rose-50 text-gray-800 min-h-screen">
 
-  <div class="max-w-3xl mx-auto py-10 px-4 text-center">
-    <h1 class="text-3xl font-bold mb-2">Ahsen Emir Nişan Anıları</h1>
-    <p class="mb-6 text-gray-600">Fotoğraflarınızı yükleyin 💕</p>
+  <div class="max-w-5xl mx-auto py-10 px-4">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl md:text-4xl font-bold mb-2">Ahsen Emir Nişan Anıları</h1>
+      <p class="text-gray-600">Fotoğraflarınızı yükleyin 💕</p>
+    </div>
 
-    <input id="name" type="text" placeholder="Ad Soyad"
-      class="border p-2 w-full mb-4 rounded" />
+    <div class="bg-white rounded-2xl shadow p-6 mb-8">
+      <input
+        id="name"
+        type="text"
+        placeholder="Ad Soyad"
+        class="border p-3 w-full mb-4 rounded-lg"
+      />
 
-    <input id="file" type="file" multiple
-      class="mb-4" />
+      <input
+        id="file"
+        type="file"
+        accept="image/*"
+        multiple
+        class="border p-3 w-full mb-4 rounded-lg bg-white"
+      />
 
-    <button onclick="upload()"
-      class="bg-rose-400 text-white px-6 py-2 rounded">
-      Yükle
-    </button>
+      <button
+        id="uploadBtn"
+        onclick="uploadFiles()"
+        class="bg-rose-400 hover:bg-rose-500 text-white px-6 py-3 rounded-lg"
+      >
+        Yükle
+      </button>
 
-    <div id="gallery" class="grid grid-cols-2 gap-4 mt-8"></div>
+      <p id="status" class="text-sm mt-3 text-gray-600"></p>
+    </div>
+
+    <div>
+      <h2 class="text-2xl font-semibold mb-4">Galeri</h2>
+      <div id="gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+    </div>
   </div>
 
   <script>
-    function upload() {
-      const name = document.getElementById("name").value;
-      const files = document.getElementById("file").files;
+    const supabaseUrl = "https://sprthcaxikqrykkzmcmI.supabase.co";
+    const supabaseKey = "sb_publishable_cTie7htJ873Fm1-055CUZg_GjYAdr2V";
+    const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-      if (!name || files.length === 0) {
-        alert("İsim ve fotoğraf ekleyin");
+    async function loadGallery() {
+      const gallery = document.getElementById("gallery");
+      gallery.innerHTML = "<p class='text-gray-500'>Yükleniyor...</p>";
+
+      const { data, error } = await sb
+        .from("photos")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        gallery.innerHTML = "<p class='text-red-500'>Galeri yüklenemedi.</p>";
+        console.error(error);
         return;
       }
 
-      for (let file of files) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const gallery = document.getElementById("gallery");
+      if (!data || data.length === 0) {
+        gallery.innerHTML = "<p class='text-gray-500'>Henüz fotoğraf yüklenmedi.</p>";
+        return;
+      }
 
-          const div = document.createElement("div");
-          div.innerHTML = `
-            <img src="${e.target.result}" class="rounded shadow">
-            <p class="text-sm mt-1">${name}</p>
-          `;
+      gallery.innerHTML = data.map((item) => `
+        <div class="bg-white rounded-2xl shadow overflow-hidden">
+          <img src="${item.image_url}" alt="Fotoğraf" class="w-full h-64 object-cover" />
+          <div class="p-4">
+            <p class="font-medium">${escapeHtml(item.uploader_name || "İsimsiz")}</p>
+            <p class="text-xs text-gray-500 mt-1">
+              ${new Date(item.created_at).toLocaleString("tr-TR")}
+            </p>
+          </div>
+        </div>
+      `).join("");
+    }
 
-          gallery.appendChild(div);
-        };
-        reader.readAsDataURL(file);
+    async function uploadFiles() {
+      const name = document.getElementById("name").value.trim();
+      const files = document.getElementById("file").files;
+      const status = document.getElementById("status");
+      const uploadBtn = document.getElementById("uploadBtn");
+
+      if (!name) {
+        status.textContent = "Lütfen ad soyad girin.";
+        status.className = "text-sm mt-3 text-red-500";
+        return;
+      }
+
+      if (!files.length) {
+        status.textContent = "Lütfen en az bir fotoğraf seçin.";
+        status.className = "text-sm mt-3 text-red-500";
+        return;
+      }
+
+      uploadBtn.disabled = true;
+      uploadBtn.classList.add("opacity-60", "cursor-not-allowed");
+      status.textContent = "Fotoğraflar yükleniyor...";
+      status.className = "text-sm mt-3 text-gray-600";
+
+      try {
+        for (const file of files) {
+          if (!file.type.startsWith("image/")) {
+            throw new Error("Sadece görsel dosyaları yükleyebilirsiniz.");
+          }
+
+          if (file.size > 10 * 1024 * 1024) {
+            throw new Error(`${file.name} 10 MB sınırını aşıyor.`);
+          }
+
+          const ext = file.name.split(".").pop();
+          const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          const filePath = `uploads/${fileName}`;
+
+          const { error: uploadError } = await sb.storage
+            .from("photos")
+            .upload(filePath, file);
+
+          if (uploadError) throw uploadError;
+
+          const { data: publicUrlData } = sb.storage
+            .from("photos")
+            .getPublicUrl(filePath);
+
+          const imageUrl = publicUrlData.publicUrl;
+
+          const { error: insertError } = await sb
+            .from("photos")
+            .insert({
+              uploader_name: name,
+              image_url: imageUrl
+            });
+
+          if (insertError) throw insertError;
+        }
+
+        status.textContent = "Fotoğraflar başarıyla yüklendi.";
+        status.className = "text-sm mt-3 text-green-600";
+        document.getElementById("file").value = "";
+        await loadGallery();
+      } catch (error) {
+        console.error(error);
+        status.textContent = "Hata: " + error.message;
+        status.className = "text-sm mt-3 text-red-500";
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.classList.remove("opacity-60", "cursor-not-allowed");
       }
     }
-  </script>
 
+    function escapeHtml(str) {
+      return str
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    loadGallery();
+  </script>
 </body>
 </html>
