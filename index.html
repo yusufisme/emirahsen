@@ -208,6 +208,9 @@
     }
 
     async function loadGallery() {
+      selectedImages = [];
+      updateSelectedCount();
+
       gallery.innerHTML = "<p class='text-gray-500'>Yükleniyor...</p>";
 
       const { data, error } = await sb
@@ -232,7 +235,7 @@
         const safeDate = new Date(item.created_at).toLocaleString("tr-TR");
 
         return `
-          <div class="bg-white rounded-2xl shadow overflow-hidden">
+          <div class="photo-card bg-white rounded-2xl shadow overflow-hidden">
             <div class="relative">
               <label class="absolute top-3 left-3 z-10 bg-white/90 rounded-full w-8 h-8 flex items-center justify-center shadow cursor-pointer">
                 <input
@@ -250,6 +253,7 @@
                 data-url="${item.image_url}"
                 data-name="${safeName}"
                 data-date="${item.created_at}"
+                onerror="this.closest('.photo-card').remove()"
               />
             </div>
 
@@ -379,8 +383,9 @@
 
     function unlockSite() {
       const value = passwordInput.value.trim();
+
       if (value === SITE_PASSWORD) {
-        sessionStorage.setItem("site_access", "granted");
+        passwordError.classList.add("hidden");
         passwordGate.classList.add("hidden");
         appContent.classList.remove("hidden");
         loadGallery();
@@ -406,12 +411,6 @@
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeModalFn();
     });
-
-    if (sessionStorage.getItem("site_access") === "granted") {
-      passwordGate.classList.add("hidden");
-      appContent.classList.remove("hidden");
-      loadGallery();
-    }
   </script>
 </body>
 </html>
