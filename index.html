@@ -8,53 +8,92 @@
 </head>
 <body class="bg-rose-50 text-gray-800 min-h-screen">
 
-  <div class="max-w-5xl mx-auto py-10 px-4">
-    <div class="text-center mb-8">
-      <h1 class="text-3xl md:text-4xl font-bold mb-2">Ahsen Emir Nişan Anıları</h1>
-      <p class="text-gray-600">Fotoğraflarınızı yükleyin 💕</p>
-    </div>
-
-    <div class="bg-white rounded-2xl shadow p-6 mb-8">
-      <input
-        id="name"
-        type="text"
-        placeholder="Ad Soyad"
-        class="border p-3 w-full mb-4 rounded-lg"
-      />
+  <!-- Şifre Ekranı -->
+  <div id="passwordGate" class="fixed inset-0 z-[100] bg-rose-50 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 text-center">
+      <h1 class="text-2xl font-bold mb-2">Ahsen Emir Nişan Anıları</h1>
+      <p class="text-gray-600 mb-5">Devam etmek için şifreyi girin</p>
 
       <input
-        id="file"
-        type="file"
-        accept="image/*"
-        multiple
-        class="border p-3 w-full mb-4 rounded-lg bg-white"
+        id="passwordInput"
+        type="password"
+        placeholder="Şifre"
+        class="border p-3 w-full rounded-lg mb-4"
       />
 
       <button
-        id="uploadBtn"
-        class="bg-rose-400 hover:bg-rose-500 text-white px-6 py-3 rounded-lg"
+        id="passwordBtn"
+        class="w-full bg-rose-400 hover:bg-rose-500 text-white py-3 rounded-lg"
       >
-        Yükle
+        Giriş Yap
       </button>
 
-      <p id="status" class="text-sm mt-3 text-gray-600"></p>
+      <p id="passwordError" class="text-red-500 text-sm mt-3 hidden">Şifre yanlış.</p>
     </div>
+  </div>
 
-    <div>
-      <h2 class="text-2xl font-semibold mb-4">Galeri</h2>
-      <div id="gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+  <div id="appContent" class="hidden">
+    <div class="max-w-6xl mx-auto py-10 px-4">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold mb-2">Ahsen Emir Nişan Anıları</h1>
+        <p class="text-gray-600">Fotoğraflarınızı yükleyin 💕</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6 mb-8">
+        <input
+          id="name"
+          type="text"
+          placeholder="Ad Soyad"
+          class="border p-3 w-full mb-4 rounded-lg"
+        />
+
+        <input
+          id="file"
+          type="file"
+          accept="image/*"
+          multiple
+          class="border p-3 w-full mb-4 rounded-lg bg-white"
+        />
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            id="uploadBtn"
+            class="bg-rose-400 hover:bg-rose-500 text-white px-6 py-3 rounded-lg"
+          >
+            Yükle
+          </button>
+
+          <button
+            id="downloadSelectedBtn"
+            class="bg-gray-800 hover:bg-black text-white px-6 py-3 rounded-lg"
+          >
+            Seçilenleri İndir
+          </button>
+        </div>
+
+        <p id="status" class="text-sm mt-3 text-gray-600"></p>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between gap-4 mb-4">
+          <h2 class="text-2xl font-semibold">Galeri</h2>
+          <p id="selectedCount" class="text-sm text-gray-600">0 fotoğraf seçildi</p>
+        </div>
+
+        <div id="gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+      </div>
     </div>
   </div>
 
   <!-- Modal -->
   <div
     id="imageModal"
-    class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 p-4"
+    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4"
   >
-    <div class="relative max-w-4xl w-full">
+    <div class="relative max-w-5xl w-full">
       <button
         id="closeModal"
-        class="absolute top-3 right-3 bg-white text-black rounded-full w-10 h-10 text-lg shadow"
+        class="absolute top-3 right-3 bg-white text-black rounded-full w-10 h-10 text-lg shadow z-10"
       >
         ✕
       </button>
@@ -94,11 +133,21 @@
     const supabaseKey = "sb_publishable_cTie7htJ873Fm1-055CUZg_GjYAdr2V";
     const sb = createClient(supabaseUrl, supabaseKey);
 
+    const SITE_PASSWORD = "ahsenemir19";
+
+    const passwordGate = document.getElementById("passwordGate");
+    const appContent = document.getElementById("appContent");
+    const passwordInput = document.getElementById("passwordInput");
+    const passwordBtn = document.getElementById("passwordBtn");
+    const passwordError = document.getElementById("passwordError");
+
     const nameInput = document.getElementById("name");
     const fileInput = document.getElementById("file");
     const uploadBtn = document.getElementById("uploadBtn");
+    const downloadSelectedBtn = document.getElementById("downloadSelectedBtn");
     const statusEl = document.getElementById("status");
     const gallery = document.getElementById("gallery");
+    const selectedCount = document.getElementById("selectedCount");
 
     const imageModal = document.getElementById("imageModal");
     const modalImage = document.getElementById("modalImage");
@@ -106,6 +155,8 @@
     const modalDate = document.getElementById("modalDate");
     const downloadBtn = document.getElementById("downloadBtn");
     const closeModal = document.getElementById("closeModal");
+
+    let selectedImages = [];
 
     function setStatus(text, type = "normal") {
       statusEl.textContent = text;
@@ -122,6 +173,21 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+    }
+
+    function updateSelectedCount() {
+      selectedCount.textContent = `${selectedImages.length} fotoğraf seçildi`;
+    }
+
+    function toggleSelect(imageUrl, checked) {
+      if (checked) {
+        if (!selectedImages.includes(imageUrl)) {
+          selectedImages.push(imageUrl);
+        }
+      } else {
+        selectedImages = selectedImages.filter((url) => url !== imageUrl);
+      }
+      updateSelectedCount();
     }
 
     function openModal(imageUrl, uploaderName, createdAt) {
@@ -160,26 +226,56 @@
         return;
       }
 
-      gallery.innerHTML = data.map((item) => `
-        <div class="bg-white rounded-2xl shadow overflow-hidden">
-          <button
-            class="w-full text-left"
-            onclick="window.openGalleryModal(
-              ${JSON.stringify(item.image_url)},
-              ${JSON.stringify(item.uploader_name || "İsimsiz")},
-              ${JSON.stringify(item.created_at)}
-            )"
-          >
-            <img src="${item.image_url}" alt="Fotoğraf" class="w-full h-64 object-cover hover:opacity-95 transition" />
-          </button>
-          <div class="p-4">
-            <p class="font-medium">${escapeHtml(item.uploader_name || "İsimsiz")}</p>
-            <p class="text-xs text-gray-500 mt-1">
-              ${new Date(item.created_at).toLocaleString("tr-TR")}
-            </p>
+      gallery.innerHTML = data.map((item) => {
+        const checked = selectedImages.includes(item.image_url) ? "checked" : "";
+        const safeName = escapeHtml(item.uploader_name || "İsimsiz");
+        const safeDate = new Date(item.created_at).toLocaleString("tr-TR");
+
+        return `
+          <div class="bg-white rounded-2xl shadow overflow-hidden">
+            <div class="relative">
+              <label class="absolute top-3 left-3 z-10 bg-white/90 rounded-full w-8 h-8 flex items-center justify-center shadow cursor-pointer">
+                <input
+                  type="checkbox"
+                  class="photo-checkbox w-4 h-4 accent-rose-500"
+                  data-url="${item.image_url}"
+                  ${checked}
+                />
+              </label>
+
+              <img
+                src="${item.image_url}"
+                alt="Fotoğraf"
+                class="w-full h-64 object-cover cursor-pointer gallery-image"
+                data-url="${item.image_url}"
+                data-name="${safeName}"
+                data-date="${item.created_at}"
+              />
+            </div>
+
+            <div class="p-4">
+              <p class="font-medium">${safeName}</p>
+              <p class="text-xs text-gray-500 mt-1">${safeDate}</p>
+            </div>
           </div>
-        </div>
-      `).join("");
+        `;
+      }).join("");
+
+      document.querySelectorAll(".gallery-image").forEach((img) => {
+        img.addEventListener("click", () => {
+          openModal(
+            img.dataset.url,
+            img.dataset.name,
+            img.dataset.date
+          );
+        });
+      });
+
+      document.querySelectorAll(".photo-checkbox").forEach((checkbox) => {
+        checkbox.addEventListener("change", (e) => {
+          toggleSelect(e.target.dataset.url, e.target.checked);
+        });
+      });
     }
 
     async function uploadFiles() {
@@ -248,9 +344,59 @@
       }
     }
 
-    window.openGalleryModal = openModal;
+    async function downloadFile(url, index) {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `ahsen-emir-${index + 1}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(blobUrl);
+      } catch (error) {
+        console.error("İndirme hatası:", error);
+      }
+    }
+
+    async function downloadSelected() {
+      if (selectedImages.length === 0) {
+        setStatus("Lütfen önce en az bir fotoğraf seçin.", "error");
+        return;
+      }
+
+      setStatus("Seçilen fotoğraflar indiriliyor...");
+
+      for (let i = 0; i < selectedImages.length; i++) {
+        await downloadFile(selectedImages[i], i);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      setStatus("Seçilen fotoğraflar indirildi.", "success");
+    }
+
+    function unlockSite() {
+      const value = passwordInput.value.trim();
+      if (value === SITE_PASSWORD) {
+        sessionStorage.setItem("site_access", "granted");
+        passwordGate.classList.add("hidden");
+        appContent.classList.remove("hidden");
+        loadGallery();
+      } else {
+        passwordError.classList.remove("hidden");
+      }
+    }
+
+    passwordBtn.addEventListener("click", unlockSite);
+    passwordInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") unlockSite();
+    });
 
     uploadBtn.addEventListener("click", uploadFiles);
+    downloadSelectedBtn.addEventListener("click", downloadSelected);
+
     closeModal.addEventListener("click", closeModalFn);
 
     imageModal.addEventListener("click", (e) => {
@@ -261,7 +407,11 @@
       if (e.key === "Escape") closeModalFn();
     });
 
-    loadGallery();
+    if (sessionStorage.getItem("site_access") === "granted") {
+      passwordGate.classList.add("hidden");
+      appContent.classList.remove("hidden");
+      loadGallery();
+    }
   </script>
 </body>
 </html>
