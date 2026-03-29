@@ -32,6 +32,29 @@
     </div>
   </div>
 
+  <!-- Karşılama / Bilgilendirme Modal -->
+  <div id="welcomeModal" class="fixed inset-0 z-[110] bg-black/50 hidden items-center justify-center p-4">
+    <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl p-6 text-center">
+      <h2 class="text-2xl font-bold mb-3">Hoş Geldiniz 💕</h2>
+
+      <p class="text-gray-700 mb-4">
+        Merhaba, bu mutlu günümüzde bizi yalnız bırakmadığınız için teşekkür ederiz.
+      </p>
+
+      <p class="text-gray-600 text-sm leading-6 mb-6">
+        Lütfen en güzel ve anlamlı kareleri yükleyin 📸<br />
+        Tekrarlayan, bulanık veya gereksiz fotoğraflardan kaçınmanız rica olunur.
+      </p>
+
+      <button
+        id="welcomeBtn"
+        class="bg-rose-400 hover:bg-rose-500 text-white px-6 py-3 rounded-lg"
+      >
+        Devam Et
+      </button>
+    </div>
+  </div>
+
   <div id="appContent" class="hidden">
     <div class="max-w-6xl mx-auto py-10 px-4">
       <div class="text-center mb-8">
@@ -140,6 +163,9 @@
     const passwordInput = document.getElementById("passwordInput");
     const passwordBtn = document.getElementById("passwordBtn");
     const passwordError = document.getElementById("passwordError");
+
+    const welcomeModal = document.getElementById("welcomeModal");
+    const welcomeBtn = document.getElementById("welcomeBtn");
 
     const nameInput = document.getElementById("name");
     const fileInput = document.getElementById("file");
@@ -387,17 +413,26 @@
       if (value === SITE_PASSWORD) {
         passwordError.classList.add("hidden");
         passwordGate.classList.add("hidden");
-        appContent.classList.remove("hidden");
-        loadGallery();
+        welcomeModal.classList.remove("hidden");
+        welcomeModal.classList.add("flex");
       } else {
         passwordError.classList.remove("hidden");
       }
+    }
+
+    function continueToSite() {
+      welcomeModal.classList.add("hidden");
+      welcomeModal.classList.remove("flex");
+      appContent.classList.remove("hidden");
+      loadGallery();
     }
 
     passwordBtn.addEventListener("click", unlockSite);
     passwordInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") unlockSite();
     });
+
+    welcomeBtn.addEventListener("click", continueToSite);
 
     uploadBtn.addEventListener("click", uploadFiles);
     downloadSelectedBtn.addEventListener("click", downloadSelected);
@@ -409,7 +444,9 @@
     });
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeModalFn();
+      if (e.key === "Escape") {
+        closeModalFn();
+      }
     });
   </script>
 </body>
